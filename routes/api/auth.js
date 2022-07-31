@@ -5,7 +5,9 @@ const jwt = require("jsonwebtoken");
 const gravatar = require("gravatar");
 const path = require("path");
 const fs = require("fs/promises");
+
 const { nanoid } = require("nanoid");
+
 require("dotenv").config();
 
 const User = require("../../models/user");
@@ -37,17 +39,18 @@ const { SECRET_KEY } = process.env;
 router.post("/signup", async (req, res, next) => {
   try {
     const { error } = authRegisterSchema.validate(req.body);
+
     if (error) {
       throw createError(400);
     }
     const { email, password, name } = req.body;
+
     const user = await User.findOne({ email });
+
     if (user) {
       throw createError(409, "Email in use");
     }
     const verificationToken = nanoid();
-
-    console.log(verificationToken);
 
     const hashPassword = await bcrypt.hash(password, 10);
     const newAvatar = gravatar.url(email);
@@ -64,7 +67,9 @@ router.post("/signup", async (req, res, next) => {
       subject: "Prove your email",
       html: `<a target="_blank" href="http://localhost:3000/api/auth/${verificationToken}> Press here to confirm your email"</a>`,
     };
+
     await sendMail(mail);
+
     res.status(201).json({
       name: result.name,
       email: result.email,
@@ -77,10 +82,13 @@ router.post("/signup", async (req, res, next) => {
 router.get("/verify/:verificationToken", async (req, res, next) => {
   try {
     const { verificationToken } = req.params;
+
     const user = await User.findOne({ verificationToken });
+
     if (!user) {
       throw createError(404, "Not Found");
     }
+
     await User.findByIdAndUpdate(user._id, {
       verificationToken: "",
       verify: true,
@@ -95,11 +103,13 @@ router.get("/verify/:verificationToken", async (req, res, next) => {
 router.post("/verify", async (req, res, next) => {
   try {
     const { error } = verifyEmailSchema.validate(req.body);
+
     if (error) {
       throw createError(400);
     }
 
     const { email } = req.body;
+
     const user = User.findOne({ email });
 
     if (!user) {
@@ -109,12 +119,15 @@ router.post("/verify", async (req, res, next) => {
     if (user.verify) {
       throw createError(400, "Verification has already been passed");
     }
+
     const mail = {
       to: email,
       subject: "Prove your email",
       html: `<a target="_blank" href="http://localhost:3000/api/auth/${user.verificationToken}> Press here to confirm your email"</a>`,
     };
+
     await sendMail(mail);
+
     res.json({
       message: "Verification email sent",
     });
